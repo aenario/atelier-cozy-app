@@ -1,0 +1,17 @@
+{
+	"name": "mes-prets",
+	"version": "0.0.1",
+	"description": "An application to get you started with web app development and Cozy.",
+	"cozy-type": "static",
+	"cozy-displayName": "Mes prêts",
+	"icon-path": "logo.png",
+	"author": "aenario",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cozy-labs/atelier-jdll.git"
+	},
+	"cozy-permissions": {
+		"contact": "choose friends to loan to",
+		"loan": "keep track of your loans"
+	}
+}

@@ -21,104 +21,66 @@ var refreshLoans = function(){
 }
 
 
-var ContactSelector = function({contacts, valueLink}){
-    console.log(contacts);
-    return <select valueLink={valueLink}>
-        {contacts.map( function (c) {
-            return <option key={c._id} value={c._id}>{c.fn}</option>;
-        })}
-    </select>
+function renderContacts({contacts}){
+    return '<select id="contact-select">' +
+        contacts.map(function (c) {
+            return '<option value="' + c._id + '" >' + c.fn + '</option>'
+        }).join('') +
+    '</select>';
 }
 
-class LoanView extends React.Component {
-
-    constructor() {
-        super()
-        this.onDelete = this.onDelete.bind(this)
-    }
-
-    onDelete(){
-        cozysdk.destroy('loan', this.props.loan._id, function(err){
-            if(err) alert(err)
-            else refreshLoans()
-        });
-    }
-
-    render() {
-        let contact = store.contacts.find((c) => c._id === this.props.loan.contactid)
-        console.log("one loan", contact);
-        let name = contact ? contact.fn : 'unknown(' + this.props.loan.contactid + ')'
-        return <li className="loan">
-            Loaned to <strong>{name}</strong> : {this.props.loan.item}
-            <a onClick={this.onDelete}> &times; </a>
-        </li>
-    }
+window.onLoanDelete = function onLoanDelete(){
+    id = event.target.dataset.loanid
+    console.log("THERE", id)
+    cozysdk.destroy('loan', id, function(err){
+        if(err) alert(err)
+        else refreshLoans()
+    });
 }
 
+window.onFormSubmit = function onFormSubmit() {
+    event.preventDefault()
+    var newLoan = {
+        contactid: document.getElementById('contact-select').value,
+        item: document.getElementById('item-input').value
+    };
+    cozysdk.create('loan', newLoan, function(err) {
+        if (err) this.setState({error: err})
+        refreshLoans()
+    });
 
-var Form = React.createClass({
-
-    mixins: [React.addons.LinkedStateMixin],
-
-    getInitialState: function(){
-        return {
-            itemName: '',
-            selectedContactID: this.props.contacts[1]._id
-        }
-    },
-
-    onValidateForm (e){
-        e.preventDefault()
-        var newLoan = {
-            contactid: this.state.selectedContactID,
-            item: this.state.itemName
-        };
-        cozysdk.create('loan', newLoan, function(err) {
-            if (err) this.setState({error: err})
-            refreshLoans()
-        });
-    },
-
-    render: function() {
-        var errorPanel = null
-        if (this.state.error) errorPanel = <p style="color:red">
-            {this.state.error}</p>
-
-        return <form id="loaner" onSubmit={this.onValidateForm}>
-            <label> I am loaning
-                <input type="text" valueLink={this.linkState('itemName')} />
-            </label>
-            <label> To
-                <ContactSelector
-                    contacts={this.props.contacts}
-                    valueLink={this.linkState('selectedContactID')} />
-            </label>
-            <button>Add</button>
-            {errorPanel}
-        </form>;
-    }
-
-})
-
-class Application extends React.Component{
-
-
-    render () {
-        let loanviews = this.props.loans.map( function (loan) {
-            return <LoanView key={loan._id} loan={loan} />
-        })
-
-        return <div id="application">
-            <Form contacts={this.props.contacts}/>
-            <ul className="loan-list">
-                {loanviews.length ? loanviews :
-                    <p> You've got everything </p>
-                }
-            </ul>
-        </div>
-    }
+    return false
 }
 
+function renderLoan(loan) {
+    let contact = store.contacts.find((c) => c._id === loan.contactid)
+    let name = contact ? contact.fn : 'unknown(' + loan.contactid + ')'
+    return '<li className="loan">' +
+        'Loaned to <strong>' + name + '</strong> : ' + loan.item +
+        '<a data-loanid="'+ loan._id + '" onClick="return onLoanDelete()"> &times; </a></li>'
+}
+
+function renderForm({contacts, error}) {
+    return '<form id="loaner" onsubmit="return onFormSubmit()">' +
+        '<label> I am loaning' +
+            '<input type="text" id="item-input" />' +
+        '</label>' +
+        '<label> To' +
+            renderContacts({contacts}) +
+        '</label><button>Add</button>' +
+        (error ? '<p>' + error + '</p>' : '') +
+    '</form>'
+}
+
+function renderApp({loans, contacts}){
+    let loanviews = loans.map(renderLoan).join('');
+    return '<div id="application">' +
+        renderForm({contacts: store.contacts}) +
+        '<ul className="loan-list">' +
+            (loanviews.length ? loanviews : '<p> You\'ve got everything</p>') +
+        '</ul>' +
+    '</div>'
+}
 
 refreshContacts()
 map = 'function(doc) { emit(doc._id, null); }';
@@ -127,5 +89,7 @@ cozysdk.defineRequest('loan', 'all', map, function(err) {
 });
 
 var render = function(){
-    ReactDOM.render(<Application {...store }/>, document.getElementById('example'));
+    var txt = renderApp(store)
+    console.log("tete", renderApp, txt);
+    document.getElementById('example').innerHTML = txt
 }

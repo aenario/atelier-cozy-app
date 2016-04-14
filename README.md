@@ -1,1 +1,1 @@
-# atelier-jdll-app
+# atelier-cozy-app
